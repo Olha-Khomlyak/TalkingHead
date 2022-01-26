@@ -1,5 +1,5 @@
 import React, {useEffect, useState, useRef} from 'react';
-import {View, Text, PermissionsAndroid} from 'react-native';
+import {View, Text, PermissionsAndroid, TextInput} from 'react-native';
 import LottieView from 'lottie-react-native';
 import RtcEngine, {
   AudioVolumeIndication,
@@ -10,13 +10,15 @@ import RtcEngine, {
 import {Button} from 'react-native-elements';
 const appId = 'd55d41d18ec948608817759bf5318d72';
 const token =
-  '006d55d41d18ec948608817759bf5318d72IAAYrJS6VJ90+0pvvbV01n/H58qSKYmkDgTCyoWBAN5jrm8tgHwAAAAAIgDBmKIEQmjdYQQAAQBCaN1hAwBCaN1hAgBCaN1hBABCaN1h';
+  '006d55d41d18ec948608817759bf5318d72IABeoZTAIZkIYon77BE04HPMr8+5fGBongIvc3HLem8Hq28tgHwAAAAAIgAbEuQAmZzyYQQAAQCZnPJhAwCZnPJhAgCZnPJhBACZnPJh';
 const channel = 'inter';
 
 const App = () => {
   const [engine, setEngine] = useState();
   const [currentSpeaker, setCurrentSpeaker] = useState();
   const [animationSpeed, setSpeed] = useState(0);
+  const [volume, setVolume] = useState(0);
+  const [text, setText] = useState('');
 
   const animationRef = useRef();
 
@@ -25,16 +27,15 @@ const App = () => {
   }, []);
 
   useEffect(() => {
-    if (currentSpeaker != 0) {
-      animationRef.current.play(1, 120);
+    if (currentSpeaker != 0 && volume >= 100) {
+      animationRef.current.play();
       setSpeed(1);
       console.log('REMOTE SPEAKER');
     } else {
       setSpeed(0);
-      animationRef.current.reset()
-
+      animationRef.current.reset();
     }
-  }, [currentSpeaker]);
+  }, [currentSpeaker, volume]);
 
   const reqestPermission = async () => {
     try {
@@ -51,8 +52,7 @@ const App = () => {
         console.log('You can use the cameras & mic');
         init(appId);
         setSpeed(0);
-        animationRef.current.reset()
-
+        animationRef.current.reset();
       } else {
         console.log('Permission denied');
       }
@@ -71,28 +71,34 @@ const App = () => {
     await engine.enableAudioVolumeIndication(1000, 3, true).then(res => {
       console.log('enableAudioVolumeIndication: ', res);
     });
-    await engine.joinChannel(token, channel, null, 0);
+    await engine.joinChannel(text, channel, null, 0);
     engine.addListener('UserOffline', (uid, reason) => {
       endCall();
     });
     engine.addListener('AudioVolumeIndication', id => {
       if (id[0]) {
         setCurrentSpeaker(parseInt(id[0].uid));
-        console.log('AudioVolumeIndication: ', id[0].uid);
+        setVolume(parseInt(id[0].volume));
+        console.log('AudioVolumeIndication: ', id[0]);
       }
     });
   };
 
   const endCall = async () => {
     setSpeed(0);
-    animationRef.current.reset()
+    animationRef.current.reset();
     await engine.leaveChannel();
-
   };
 
   return (
     <View style={{flex: 1, backgroundColor: 'white'}}>
       <Text style={{textAlign: 'center', fontSize: 27}}>Animation Trial</Text>
+      <TextInput
+        style={{borderWidth: 1, margin: 10}}
+        onChangeText={value => setText(value)}
+        value={text}
+        placeholder='Enter token'
+      />
       <Button
         title="Start call"
         buttonStyle={{backgroundColor: 'green', margin: 10}}
@@ -107,6 +113,7 @@ const App = () => {
         ref={animationRef}
         source={require('./30421-talking-boy-animation.json')}
         speed={animationSpeed}
+        loop
         style={{width: 100, height: 100, alignSelf: 'center'}}
       />
     </View>
